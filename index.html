@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuadra · Convertir extracto bancario PDF a Excel</title>
+<meta name="description" content="Convierte el extracto de tu banco en PDF a Excel o CSV en segundos: fecha, concepto, categoría, importe y saldo, con comprobación de que todo cuadra. El PDF no sale de tu ordenador. 3 extractos gratis.">
+<meta property="og:title" content="Cuadra · Tu extracto del banco, en Excel y cuadrado">
+<meta property="og:description" content="Convierte extractos bancarios en PDF a Excel en tu navegador. Sin subir tus datos a ningún servidor.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F5C4A'/%3E%3Crect x='6' y='9' width='20' height='3' fill='%23E4EFE5'/%3E%3Crect x='6' y='15' width='20' height='3' fill='%23E4EFE5'/%3E%3Crect x='6' y='21' width='12' height='3' fill='%23E4EFE5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <a class="marca" href="#">Cuadra</a>
+  <nav>
+    <a href="#como">Cómo funciona</a>
+    <a href="#precio">Precio</a>
+    <a href="#preguntas">Preguntas</a>
+    <button class="enlace" id="abrir-licencia" type="button">Tengo una licencia</button>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="hero-texto">
+      <h1>Tu extracto del banco, en Excel y cuadrado.</h1>
+      <p class="entradilla">Arrastra el PDF que descargas de tu banca online y llévate una hoja de cálculo con fecha, concepto, categoría, importe y saldo. Cuadra comprueba fila a fila que los saldos encajan, para que no se cuele ningún error.</p>
+      <ul class="garantias">
+        <li><strong>El PDF no sale de tu ordenador.</strong> Se lee en tu navegador; no hay servidor que lo reciba.</li>
+        <li><strong><span id="gratis-n">3</span> extractos gratis</strong>, sin registrarte.</li>
+      </ul>
+    </div>
+
+    <div class="listado" id="zona" tabindex="0" role="button" aria-label="Suelta aquí tu extracto en PDF o pulsa para elegirlo">
+      <div class="perforado" aria-hidden="true"></div>
+      <div class="hoja">
+        <div class="hoja-vacia" id="hoja-vacia">
+          <p class="hoja-titulo">Suelta aquí tu extracto en PDF</p>
+          <p class="hoja-sub">o</p>
+          <button class="boton" id="elegir" type="button">Elegir PDF</button>
+          <button class="enlace" id="ejemplo" type="button">Probar con un extracto de ejemplo</button>
+        </div>
+        <div class="hoja-filas" id="hoja-filas" aria-hidden="true"></div>
+      </div>
+      <div class="perforado" aria-hidden="true"></div>
+      <input type="file" id="archivo" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+  </section>
+
+  <section class="resultado" id="resultado" hidden aria-live="polite">
+    <div class="resultado-cabecera">
+      <div>
+        <h2 id="res-titulo">Extracto convertido</h2>
+        <p class="estado" id="res-estado"></p>
+      </div>
+      <div class="acciones">
+        <button class="boton" id="bajar-xlsx" type="button">Descargar Excel</button>
+        <button class="boton secundario" id="bajar-csv" type="button">Descargar CSV</button>
+        <button class="enlace" id="otro" type="button">Convertir otro</button>
+      </div>
+    </div>
+    <dl class="cifras" id="cifras"></dl>
+    <p class="aviso" id="avisos" hidden></p>
+    <div class="tabla-marco">
+      <table class="tabla">
+        <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="num">Importe</th><th class="num">Saldo</th></tr></thead>
+        <tbody id="filas"></tbody>
+      </table>
+    </div>
+    <p class="restantes" id="restantes"></p>
+  </section>
+
+  <section class="como" id="como">
+    <h2>Cómo funciona</h2>
+    <ol class="pasos">
+      <li><h3>Descarga el extracto</h3><p>En tu banca online, busca los movimientos de la cuenta y descárgalos en PDF.</p></li>
+      <li><h3>Suéltalo en Cuadra</h3><p>Tu navegador lee el PDF, reconoce las columnas y ordena cada movimiento. Tarda un par de segundos.</p></li>
+      <li><h3>Descarga y revisa</h3><p>Bájate el Excel o el CSV. Si alguna fila no cuadra con el saldo, aparece marcada para que la mires.</p></li>
+    </ol>
+  </section>
+
+  <section class="privacidad">
+    <h2>Tus movimientos no viajan a ningún sitio</h2>
+    <p>La mayoría de conversores te piden subir el extracto a sus servidores. Cuadra no: la lectura del PDF y la creación del Excel ocurren dentro de tu navegador. Puedes desconectarte de internet después de abrir la página y seguirá funcionando.</p>
+  </section>
+
+  <section class="precio" id="precio">
+    <h2>Precio</h2>
+    <div class="planes">
+      <div class="plan">
+        <h3>Gratis</h3>
+        <p class="importe-plan">0 €</p>
+        <ul>
+          <li><span id="gratis-n2">3</span> extractos</li>
+          <li>Excel y CSV</li>
+          <li>Categorías y comprobación de saldos</li>
+        </ul>
+      </div>
+      <div class="plan destacado">
+        <h3>Pro</h3>
+        <p class="importe-plan"><span id="precio-mes">7 €</span><small> al mes</small></p>
+        <p class="alt-plan">o <span id="precio-anio">49 €</span> al año</p>
+        <ul>
+          <li>Extractos ilimitados</li>
+          <li>Varios PDF a la vez en un solo Excel</li>
+          <li>Pensado para autónomos, contables y gestorías</li>
+        </ul>
+        <a class="boton" id="comprar" href="#" target="_blank" rel="noopener">Hazte Pro</a>
+        <p class="nota-plan">Pago seguro con Gumroad. Cancelas cuando quieras.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="preguntas" id="preguntas">
+    <h2>Preguntas frecuentes</h2>
+    <details><summary>¿Con qué bancos funciona?</summary><p>Con los extractos en PDF que tienen una tabla de movimientos con fecha, concepto e importe, que es el formato de casi todos los bancos españoles. Entiende columnas de importe con signo, columnas separadas de debe y haber, fechas como 05/10/2026 o 05 oct 2026, y extractos ordenados del más antiguo al más reciente o al revés.</p></details>
+    <details><summary>¿Y si mi PDF es un escaneo o una foto?</summary><p>No funcionará: un escaneo es una imagen y no contiene texto que se pueda leer. Descarga el extracto directamente desde la banca online, que siempre genera un PDF con texto.</p></details>
+    <details><summary>¿Qué significa que los saldos cuadran?</summary><p>Para cada movimiento, Cuadra comprueba que el saldo anterior más el importe da el saldo de esa fila. Si todas las filas cuadran, sabes que no falta ni sobra ningún movimiento y que los signos son correctos.</p></details>
+    <details><summary>¿Cómo activo la versión Pro?</summary><p>Al suscribirte, Gumroad te envía una clave de licencia por correo. Pulsa «Tengo una licencia» arriba del todo y pégala. Queda guardada en este navegador.</p></details>
+    <details><summary>¿Puedo usar el Excel en mi programa de contabilidad?</summary><p>Sí. El CSV usa punto y coma y coma decimal, el formato que esperan Excel en español y la mayoría de programas de contabilidad. Las fechas del Excel son fechas de verdad, así que puedes filtrarlas y ordenarlas.</p></details>
+    <details><summary>¿Puedo cancelar la suscripción?</summary><p>Cuando quieras, desde el correo de Gumroad o tu biblioteca de Gumroad. Sigues teniendo acceso hasta el final del periodo pagado.</p></details>
+  </section>
+</main>
+
+<footer class="pie">
+  <p>Cuadra convierte extractos en tu navegador. Revisa siempre el resultado antes de usarlo en tu contabilidad.</p>
+</footer>
+
+<dialog id="dlg-licencia">
+  <form method="dialog" id="form-licencia">
+    <h2>Activar licencia Pro</h2>
+    <label for="clave">Clave de licencia</label>
+    <input id="clave" name="clave" autocomplete="off" spellcheck="false" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" required>
+    <p class="estado" id="lic-estado" role="status"></p>
+    <div class="acciones">
+      <button class="boton" id="activar" type="submit" value="activar">Activar licencia</button>
+      <button class="enlace" type="button" id="cerrar-licencia">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-limite">
+  <form method="dialog">
+    <h2>Has usado tus extractos gratis</h2>
+    <p>Con Cuadra Pro conviertes todos los extractos que quieras, también varios a la vez.</p>
+    <div class="acciones">
+      <a class="boton" id="comprar2" href="#" target="_blank" rel="noopener">Hazte Pro</a>
+      <button class="enlace" type="button" id="limite-licencia">Ya tengo una licencia</button>
+      <button class="enlace" value="cerrar">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
