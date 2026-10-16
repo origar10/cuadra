@@ -2,6 +2,7 @@ import * as pdfjsLib from "./vendor/pdf.min.mjs";
 import { extractItems, parseStatement } from "./parser.js";
 import { categorizar } from "./categorias.js";
 import { CONFIG } from "./config.js";
+import { buscarIban, ibanValido, generarFicheroNorma43 } from "./n43.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./vendor/pdf.worker.min.mjs";
 
@@ -32,18 +33,19 @@ async function verificarLicencia(clave) {
     const fin = p.subscription_ended_at || p.subscription_cancelled_at || p.subscription_failed_at;
     if (new Date(fin) < new Date()) throw new Error("La suscripción de esta licencia ha terminado. Renuévala en Gumroad para seguir.");
   }
-  return true;
+  return /gestor/i.test(p.variants || "") ? "gestoria" : "pro";
 }
 
 function esPro() {
   const lic = store.get("cuadra_licencia", null);
   return !!(lic && lic.ok && Date.now() - lic.verificada < 14 * DIA);
 }
+const esGestoria = () => esPro() && store.get("cuadra_licencia", {}).plan === "gestoria";
 
 async function revalidar() {
   const lic = store.get("cuadra_licencia", null);
   if (!lic || Date.now() - lic.verificada < 3 * DIA) return;
-  try { await verificarLicencia(lic.clave); store.set("cuadra_licencia", { ...lic, ok: true, verificada: Date.now() }); }
+  try { const plan = await verificarLicencia(lic.clave); store.set("cuadra_licencia", { ...lic, ok: true, plan, verificada: Date.now() }); }
   catch (e) { if (!(e instanceof TypeError)) store.set("cuadra_licencia", { ...lic, ok: false }); }
   pintarRestantes();
 }
@@ -73,7 +75,7 @@ async function leerArchivos(files, esEjemplo = false) {
       const { items } = await extractItems(pdfjsLib, data);
       const res = parseStatement(items);
       res.movimientos.forEach((m) => (m.categoria = categorizar(m.concepto, m.importe)));
-      resultados.push({ nombre: f.name.replace(/\.pdf$/i, ""), ...res });
+      resultados.push({ nombre: f.name.replace(/\.pdf$/i, ""), iban: buscarIban(items.map((i) => i.str).join(" ")), ...res });
     } catch (e) {
       console.error(e);
       resultados.push({ nombre: f.name, movimientos: [], resumen: null, avisos: [/password/i.test(e?.message) ? "Este PDF está protegido con contraseña. Ábrelo y guárdalo sin contraseña para convertirlo." : "No se ha podido leer este PDF. Comprueba que no está dañado."] });
@@ -149,7 +151,7 @@ function pintarResultado() {
       <td class="num ${m.importe < 0 ? "cargo" : "abono"}">${num.format(m.importe)}</td>
       <td class="num">${m.saldo === null ? "" : num.format(m.saldo)}</td>
     </tr>`).join("");
-  $("bajar-xlsx").disabled = $("bajar-csv").disabled = !movs.length;
+  $("bajar-xlsx").disabled = $("bajar-csv").disabled = $("bajar-n43").disabled = !movs.length;
   pintarRestantes();
   sec.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 }
@@ -157,10 +159,10 @@ function pintarResultado() {
 function pintarRestantes() {
   const pro = esPro();
   const r = restantes();
-  $("restantes").textContent = pro ? "Cuadra Pro activo: extractos ilimitados." :
+  $("restantes").textContent = esGestoria() ? "Plan Gestoría activo: extractos ilimitados y Norma 43." : pro ? "Cuadra Pro activo: extractos ilimitados." :
     r === 0 ? "Has usado tus extractos gratis. Hazte Pro para seguir convirtiendo." :
     `${r === 1 ? "Te queda 1" : `Te quedan ${r}`} de ${CONFIG.extractosGratis} extractos gratis. La descarga cuenta como uno.`;
-  $("abrir-licencia").textContent = pro ? "Pro activo" : "Tengo una licencia";
+  $("abrir-licencia").textContent = esGestoria() ? "Gestoría activo" : pro ? "Pro activo" : "Tengo una licencia";
 }
 
 // ---------- descargas
@@ -247,6 +249,43 @@ function bajarCSV() {
   bajar(new Blob(["﻿" + lineas.join("\r\n")], { type: "text/csv;charset=utf-8" }), nombreSalida("csv"));
 }
 
+// ---------- Norma 43 (plan Gestoría)
+function abrirNorma43() {
+  if (!esGestoria()) { $("dlg-gestoria").showModal(); return; }
+  const cont = $("n43-cuentas");
+  const conMovs = lote.map((r, i) => ({ r, i })).filter(({ r }) => r.movimientos.length);
+  cont.innerHTML = conMovs.map(({ r, i }) => `
+    <fieldset class="cuenta-n43" data-i="${i}">
+      <legend>${esc(r.nombre)}</legend>
+      <label for="iban-${i}">IBAN de la cuenta</label>
+      <input id="iban-${i}" class="n43-iban" value="${esc(r.iban || "")}" placeholder="ES00 0000 0000 0000 0000 0000" autocomplete="off" spellcheck="false" required>
+      <label for="tit-${i}">Titular o cliente</label>
+      <input id="tit-${i}" class="n43-tit" value="" placeholder="Nombre del titular" autocomplete="off">
+    </fieldset>`).join("");
+  $("n43-estado").textContent = conMovs.some(({ r }) => r.iban) ? "Hemos encontrado el IBAN en el PDF. Compruébalo antes de descargar." : "";
+  $("n43-estado").className = "estado";
+  $("dlg-n43").showModal();
+}
+
+function bajarNorma43(e) {
+  e.preventDefault();
+  const est = $("n43-estado");
+  try {
+    const cuentas = [...document.querySelectorAll(".cuenta-n43")].map((fs) => {
+      const r = lote[+fs.dataset.i];
+      const iban = fs.querySelector(".n43-iban").value.replace(/[\s-]/g, "").toUpperCase();
+      if (!ibanValido(iban)) throw new Error(`El IBAN de «${r.nombre}» no es válido. Revisa que esté completo.`);
+      return { iban, titular: fs.querySelector(".n43-tit").value, movimientos: r.movimientos, saldoInicial: r.resumen?.saldoInicial ?? null };
+    });
+    const txt = generarFicheroNorma43(cuentas);
+    bajar(new Blob([txt], { type: "text/plain" }), nombreSalida("n43"));
+    est.className = "estado ok"; est.textContent = "Fichero Norma 43 descargado.";
+    setTimeout(() => $("dlg-n43").close(), 900);
+  } catch (err) {
+    est.className = "estado mal"; est.textContent = err.message;
+  }
+}
+
 // ---------- eventos
 const zona = $("zona"), input = $("archivo");
 zona.addEventListener("click", (e) => { if (e.target.closest("#ejemplo")) return; input.click(); });
@@ -265,6 +304,10 @@ $("ejemplo").addEventListener("click", async (e) => {
 });
 $("bajar-xlsx").addEventListener("click", bajarXLSX);
 $("bajar-csv").addEventListener("click", bajarCSV);
+$("bajar-n43").addEventListener("click", abrirNorma43);
+$("form-n43").addEventListener("submit", bajarNorma43);
+$("cerrar-n43").addEventListener("click", () => $("dlg-n43").close());
+$("gestoria-licencia").addEventListener("click", () => { $("dlg-gestoria").close(); abrirLicencia(); });
 $("otro").addEventListener("click", () => {
   $("zona").classList.remove("leyendo");
   $("hoja-filas").innerHTML = "";
@@ -290,9 +333,9 @@ $("form-licencia").addEventListener("submit", async (e) => {
   $("activar").disabled = true;
   est.className = "estado"; est.textContent = "Comprobando la licencia…";
   try {
-    await verificarLicencia(clave);
-    store.set("cuadra_licencia", { clave, ok: true, verificada: Date.now() });
-    est.className = "estado ok"; est.textContent = "Licencia activada. Ya tienes extractos ilimitados.";
+    const plan = await verificarLicencia(clave);
+    store.set("cuadra_licencia", { clave, ok: true, plan, verificada: Date.now() });
+    est.className = "estado ok"; est.textContent = plan === "gestoria" ? "Plan Gestoría activado: extractos ilimitados y Norma 43." : "Licencia activada. Ya tienes extractos ilimitados.";
     pintarRestantes();
     setTimeout(() => dlg.close(), 1200);
   } catch (err) {
@@ -302,7 +345,9 @@ $("form-licencia").addEventListener("submit", async (e) => {
 });
 
 // ---------- arranque
-for (const id of ["comprar", "comprar2"]) $(id).href = CONFIG.urlCompra;
+for (const id of ["comprar", "comprar2", "comprar-gestoria", "comprar-gestoria2"]) $(id).href = CONFIG.urlCompra;
+$("precio-g-mes").textContent = CONFIG.precioGestoriaMes;
+$("precio-g-anio").textContent = CONFIG.precioGestoriaAnio;
 $("gratis-n").textContent = $("gratis-n2").textContent = CONFIG.extractosGratis;
 $("precio-mes").textContent = CONFIG.precioMes;
 $("precio-anio").textContent = CONFIG.precioAnio;

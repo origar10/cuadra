@@ -19,6 +19,7 @@
   <a class="marca" href="#">Cuadra</a>
   <nav>
     <a href="#como">Cómo funciona</a>
+    <a href="#gestorias">Gestorías</a>
     <a href="#precio">Precio</a>
     <a href="#preguntas">Preguntas</a>
     <button class="enlace" id="abrir-licencia" type="button">Tengo una licencia</button>
@@ -61,6 +62,7 @@
       <div class="acciones">
         <button class="boton" id="bajar-xlsx" type="button">Descargar Excel</button>
         <button class="boton secundario" id="bajar-csv" type="button">Descargar CSV</button>
+        <button class="boton secundario" id="bajar-n43" type="button">Descargar Norma 43</button>
         <button class="enlace" id="otro" type="button">Convertir otro</button>
       </div>
     </div>
@@ -89,6 +91,18 @@
     <p>La mayoría de conversores te piden subir el extracto a sus servidores. Cuadra no: la lectura del PDF y la creación del Excel ocurren dentro de tu navegador. Puedes desconectarte de internet después de abrir la página y seguirá funcionando.</p>
   </section>
 
+  <section class="gestorias" id="gestorias">
+    <h2>Para gestorías y asesorías</h2>
+    <div class="gestorias-cuerpo">
+      <p>Tus clientes te mandan el extracto en PDF y tu programa de contabilidad solo importa Norma 43. Cuadra hace el puente: sueltas los PDF de varios clientes a la vez y descargas un único fichero Norma 43 con una cuenta por cliente, listo para importar en A3, Contasol, Sage, Holded o cualquier programa que lea el cuaderno 43.</p>
+      <ul class="garantias">
+        <li><strong>Detecta el IBAN</strong> en el propio extracto y comprueba que es correcto.</li>
+        <li><strong>Saldos verificados</strong> antes de exportar, para no importar apuntes erróneos.</li>
+        <li><strong>Sin subir datos de clientes</strong> a ningún servidor: todo ocurre en tu navegador, lo que simplifica la protección de datos.</li>
+      </ul>
+    </div>
+  </section>
+
   <section class="precio" id="precio">
     <h2>Precio</h2>
     <div class="planes">
@@ -113,6 +127,18 @@
         <a class="boton" id="comprar" href="#" target="_blank" rel="noopener">Hazte Pro</a>
         <p class="nota-plan">Pago seguro con Gumroad. Cancelas cuando quieras.</p>
       </div>
+      <div class="plan">
+        <h3>Gestoría</h3>
+        <p class="importe-plan"><span id="precio-g-mes">29 €</span><small> al mes</small></p>
+        <p class="alt-plan">o <span id="precio-g-anio">290 €</span> al año</p>
+        <ul>
+          <li>Todo lo de Pro</li>
+          <li>Exportación a Norma 43 para tu programa de contabilidad</li>
+          <li>Varios clientes en un mismo fichero</li>
+        </ul>
+        <a class="boton secundario" id="comprar-gestoria" href="#" target="_blank" rel="noopener">Elegir Gestoría</a>
+        <p class="nota-plan">En Gumroad, elige el nivel «Gestoría».</p>
+      </div>
     </div>
   </section>
 
@@ -123,6 +149,7 @@
     <details><summary>¿Qué significa que los saldos cuadran?</summary><p>Para cada movimiento, Cuadra comprueba que el saldo anterior más el importe da el saldo de esa fila. Si todas las filas cuadran, sabes que no falta ni sobra ningún movimiento y que los signos son correctos.</p></details>
     <details><summary>¿Cómo activo la versión Pro?</summary><p>Al suscribirte, Gumroad te envía una clave de licencia por correo. Pulsa «Tengo una licencia» arriba del todo y pégala. Queda guardada en este navegador.</p></details>
     <details><summary>¿Puedo usar el Excel en mi programa de contabilidad?</summary><p>Sí. El CSV usa punto y coma y coma decimal, el formato que esperan Excel en español y la mayoría de programas de contabilidad. Las fechas del Excel son fechas de verdad, así que puedes filtrarlas y ordenarlas.</p></details>
+    <details><summary>¿Qué es Norma 43 y para qué sirve?</summary><p>Es el formato estándar de los bancos españoles para los movimientos de una cuenta (cuaderno 43 de la AEB). Casi todos los programas de contabilidad lo importan y contabilizan los apuntes automáticamente. Con el plan Gestoría, Cuadra convierte el PDF en un fichero Norma 43 cuando el banco o el cliente no te lo da.</p></details>
     <details><summary>¿Puedo cancelar la suscripción?</summary><p>Cuando quieras, desde el correo de Gumroad o tu biblioteca de Gumroad. Sigues teniendo acceso hasta el final del periodo pagado.</p></details>
   </section>
 </main>
@@ -151,6 +178,31 @@
     <div class="acciones">
       <a class="boton" id="comprar2" href="#" target="_blank" rel="noopener">Hazte Pro</a>
       <button class="enlace" type="button" id="limite-licencia">Ya tengo una licencia</button>
+      <button class="enlace" value="cerrar">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-n43">
+  <form id="form-n43">
+    <h2>Descargar Norma 43</h2>
+    <p>Indica la cuenta de cada extracto. El IBAN se usa para la entidad, la oficina y el número de cuenta del fichero.</p>
+    <div id="n43-cuentas"></div>
+    <p class="estado" id="n43-estado" role="status"></p>
+    <div class="acciones">
+      <button class="boton" type="submit">Descargar Norma 43</button>
+      <button class="enlace" type="button" id="cerrar-n43">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-gestoria">
+  <form method="dialog">
+    <h2>Norma 43 es del plan Gestoría</h2>
+    <p>Con el plan Gestoría exportas los extractos de tus clientes a Norma 43 e importas los movimientos directamente en tu programa de contabilidad.</p>
+    <div class="acciones">
+      <a class="boton" id="comprar-gestoria2" href="#" target="_blank" rel="noopener">Elegir Gestoría</a>
+      <button class="enlace" type="button" id="gestoria-licencia">Ya tengo una licencia</button>
       <button class="enlace" value="cerrar">Cerrar</button>
     </div>
   </form>

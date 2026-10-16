@@ -5,4 +5,6 @@ export const CONFIG = {
   extractosGratis: 3,
   precioMes: "7 €",
   precioAnio: "49 €",
+  precioGestoriaMes: "29 €",
+  precioGestoriaAnio: "290 €",
 };
