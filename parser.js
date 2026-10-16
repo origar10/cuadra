@@ -1,20 +1,23 @@
 // Motor de extracción de movimientos bancarios a partir del texto posicionado de un PDF.
 // Funciona en navegador y en Node: no depende del DOM.
 
-const MONTHS = { ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, set: 9, oct: 10, nov: 11, dic: 12 };
+const MONTHS = { ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, set: 9, oct: 10, nov: 11, dic: 12,
+  jan: 1, apr: 4, aug: 8, dec: 12 };
+const MES_RE = "ene|jan|feb|mar|abr|apr|may|jun|jul|ago|aug|sep|set|oct|nov|dic|dec";
 const DATE_RE = /^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2}|\d{4}))?$/;
-const DATE_TXT_RE = /^(\d{1,2})[\s\-\/.]?(ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-z]*\.?(?:[\s\-\/.]?(\d{2}|\d{4}))?$/i;
-const AMT_ES = /^([+\-−])?\s*(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})\s*(?:€|eur)?\s*([+\-−])?$/i;
-const AMT_EN = /^([+\-−])?\s*(\d{1,3}(?:,\d{3})+|\d+)\.(\d{2})\s*(?:€|eur)?\s*([+\-−])?$/i;
+const DATE_TXT_RE = new RegExp(`^(\\d{1,2})[\\s\\-\\/.]?(${MES_RE})[a-z]*\\.?(?:[\\s\\-\\/.]?(\\d{2}|\\d{4}))?$`, "i");
+const DATE_MDY_RE = new RegExp(`^(${MES_RE})[a-z]*\\.?\\s+(\\d{1,2}),?\\s+(\\d{4})$`, "i");
+const AMT_ES = /^([+\-−])?\s*(?:€\s*)?(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})\s*(?:€|eur)?\s*([+\-−])?$/i;
+const AMT_EN = /^([+\-−])?\s*(?:€\s*)?(\d{1,3}(?:,\d{3})+|\d+)\.(\d{2})\s*(?:€|eur)?\s*([+\-−])?$/i;
 
 const HDR = {
-  fecha: /^(fecha|f\.?\s*oper(aci[oó]n)?\.?|fecha\s+oper(aci[oó]n)?|f\.?\s*contable|fecha\s+contable|data)$/i,
+  fecha: /^(fecha|f\.?\s*oper(aci[oó]n)?\.?|fecha\s+oper(aci[oó]n)?|f\.?\s*contable|fecha\s+contable|data|date|booking\s+date|fecha\s+de\s+(la\s+)?operaci[oó]n)$/i,
   valor: /^(f\.?\s*valor|fecha\s+valor|valor)$/i,
-  concepto: /^(concepto|descripci[oó]n|detalle|movimiento\s+concepto|observaciones)$/i,
-  importe: /^(importe|movimiento|cantidad|importe\s*\(?€?\)?|importe\s+eur)$/i,
-  debe: /^(debe|cargo|cargos|salidas|reintegros|d[eé]bito)$/i,
-  haber: /^(haber|abono|abonos|entradas|ingresos|cr[eé]dito)$/i,
-  saldo: /^(saldo|saldo\s*\(?€?\)?|saldo\s+eur|saldo\s+disponible)$/i,
+  concepto: /^(concepto|descripci[oó]n|detalle|movimiento\s+concepto|observaciones|description|details|reference)$/i,
+  importe: /^(importe|movimiento|cantidad|importe\s*\(?€?\)?|importe\s+eur|amount|amount\s*\(?eur\)?)$/i,
+  debe: /^(debe|cargo|cargos|salidas|reintegros|d[eé]bito|dinero\s+saliente|salida\s+de\s+dinero|money\s+out|paid\s+out|withdrawals?)$/i,
+  haber: /^(haber|abono|abonos|entradas|ingresos|cr[eé]dito|dinero\s+entrante|entrada\s+de\s+dinero|money\s+in|paid\s+in|deposits?)$/i,
+  saldo: /^(saldo|saldo\s*\(?€?\)?|saldo\s+eur|saldo\s+disponible|balance)$/i,
 };
 const SKIP_LINE = /(saldo\s+(anterior|inicial|final|a\s+\d)|total(es)?\s|suma\s|p[aá]gina\s+\d|p[aá]g\.\s*\d|^total$)/i;
 const NEG_WORDS = /(recibo|compra|retirada|reintegro|cajero|transferencia\s+a\b|transf\.?\s+a\b|enviad|comisi[oó]n|cuota|pago|cargo|adeudo|domiciliaci|impuesto|tasa)/i;
@@ -108,6 +111,8 @@ function parseDateParts(s) {
     if (y !== null && y < 100) y += 2000;
     return { d, m: mo, y };
   }
+  m = DATE_MDY_RE.exec(s);
+  if (m) return { d: +m[2], m: MONTHS[m[1].toLowerCase().slice(0, 3)], y: +m[3] };
   m = DATE_TXT_RE.exec(s);
   if (m) {
     const mo = MONTHS[m[2].toLowerCase().slice(0, 3)];
